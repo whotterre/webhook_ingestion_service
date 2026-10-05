@@ -1,5 +1,5 @@
 # Webhook Ingestion Service
-![Local version](./diagrams/local.py)
+![Local version](./diagrams/webhook_ingestion_service_(local).png)
 A webhook ingestion engine for payment processor events. Trying to push
 Go to 500K+ req/s — a step up from my previous fintech projects
 ([pgpockets](https://github.com/whotterre/pgpockets)).
