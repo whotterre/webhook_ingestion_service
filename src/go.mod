@@ -17,6 +17,7 @@ require (
 	github.com/klauspost/compress v1.20.1 // indirect
 	github.com/pierrec/lz4/v4 v4.1.31 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20250401214520-65e299d6c5c9 // indirect
+	github.com/streadway/amqp v1.1.0
 	github.com/xdg-go/pbkdf2 v1.0.0 // indirect
 	github.com/xdg-go/scram v1.2.0 // indirect
 	github.com/xdg-go/stringprep v1.0.4 // indirect

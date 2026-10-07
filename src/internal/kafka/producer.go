@@ -56,6 +56,14 @@ type Publisher struct {
 	topic    string
 }
 
+// ConfigureNetwork applies TLS and SASL settings to Sarama config.
+func ConfigureNetwork(saramaConfig *sarama.Config, cfg Config) error {
+	if err := configureTLS(saramaConfig, cfg); err != nil {
+		return err
+	}
+	return configureSASL(saramaConfig, cfg)
+}
+
 func NewPublisher(cfg Config) (*Publisher, error) {
 	if len(cfg.Brokers) == 0 {
 		return nil, fmt.Errorf("kafka brokers are required")
@@ -70,10 +78,7 @@ func NewPublisher(cfg Config) (*Publisher, error) {
 	saramaConfig.Producer.Return.Successes = true
 	saramaConfig.Producer.Return.Errors = true
 
-	if err := configureTLS(saramaConfig, cfg); err != nil {
-		return nil, err
-	}
-	if err := configureSASL(saramaConfig, cfg); err != nil {
+	if err := ConfigureNetwork(saramaConfig, cfg); err != nil {
 		return nil, err
 	}
 
