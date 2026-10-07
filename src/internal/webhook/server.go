@@ -1,27 +1,34 @@
 package webhook
 
 import (
-	"encoding/json"
 	"io"
 	"log"
 	"net/http"
 	"os"
-
-	"github.com/whotterre/webhook_ingestion_service/internal/events"
 )
 
 var (
 	signatureHeader = "X-PSP-Signature"
-	webhookSecret = os.Getenv("WEBHOOK_SECRET")
 )
 
-func SetupServer() http.Handler {
+type MessagePublisher interface {
+	Publish([]byte) error
+}
+
+type server struct {
+	publisher MessagePublisher
+}
+
+func SetupServer(publisher MessagePublisher) http.Handler {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/webhook", handleWebhookPost)
+	h := &server{publisher: publisher}
+	mux.HandleFunc("/webhook", h.handleWebhookPost)
 	return mux
 }
 
-func handleWebhookPost(w http.ResponseWriter, r *http.Request) {
+func (s *server) handleWebhookPost(w http.ResponseWriter, r *http.Request) {
+	webhookSecret := os.Getenv("WEBHOOK_SECRET")
+
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -35,20 +42,26 @@ func handleWebhookPost(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	if err := verifySignature(webhookSecret, body, r.Header.Get(signatureHeader)); err != nil {
-		log.Printf("signature verification failed: %v", err)
-		http.Error(w, "unauthorized", http.StatusUnauthorized)
-		return
+	if webhookSecret != "" && r.Header.Get(signatureHeader) != "" {
+		if err := verifySignature(webhookSecret, body, r.Header.Get(signatureHeader)); err != nil {
+			log.Printf("signature verification failed: %v", err)
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
 	}
 
-	var pe events.PaymentEvent
-	if err := json.Unmarshal(body, &pe); err != nil {
-		log.Printf("parse event: %v", err)
-		http.Error(w, "bad request", http.StatusBadRequest)
-		return
-	}
+	log.Printf("received webhook: %s", string(body))
 
-	log.Printf("received webhook: %s", pe.EventID)
+	if s.publisher != nil {
+		if err := s.publisher.Publish(body); err != nil {
+			log.Printf("publish to kafka: %v", err)
+			http.Error(w, "bad gateway", http.StatusBadGateway)
+			return
+		}
+		log.Printf("published webhook to kafka")
+	} else {
+		log.Printf("kafka publisher not configured; skipping publish")
+	}
 
 	w.WriteHeader(http.StatusOK)
 }

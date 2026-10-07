@@ -25,4 +25,4 @@ Specifically:
 
 Go 1.26+ · Postgres 16 · Apache Kafka · RabbitMQ · Redis
 
-## Shape
+The local branch would serve as a form of scratch pad for this..
