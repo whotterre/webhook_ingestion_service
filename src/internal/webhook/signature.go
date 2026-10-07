@@ -29,7 +29,6 @@ func verifySignature(secret string, body []byte, header string) error {
 		return err
 	}
 
-	// Timestamp window: reject anything older than maxSkew.
 	if time.Since(time.Unix(ts, 0)) > maxSkew {
 		return ErrStaleSignature
 	}
