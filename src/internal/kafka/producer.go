@@ -73,7 +73,7 @@ func NewPublisher(cfg Config) (*Publisher, error) {
 	}
 
 	saramaConfig := sarama.NewConfig()
-	saramaConfig.Version = sarama.V2_8_0_0
+	saramaConfig.Version = sarama.V4_0_0_0 
 	saramaConfig.Producer.RequiredAcks = sarama.WaitForAll
 	saramaConfig.Producer.Return.Successes = true
 	saramaConfig.Producer.Return.Errors = true
@@ -91,14 +91,23 @@ func NewPublisher(cfg Config) (*Publisher, error) {
 }
 
 func (p *Publisher) Publish(payload []byte) error {
+	return p.PublishWithKey("", payload)
+}
+
+func (p *Publisher) PublishWithKey(key string, payload []byte) error {
 	if p == nil {
 		return nil
 	}
 
-	_, _, err := p.producer.SendMessage(&sarama.ProducerMessage{
+	msg := &sarama.ProducerMessage{
 		Topic: p.topic,
 		Value: sarama.ByteEncoder(payload),
-	})
+	}
+	if key != "" {
+		msg.Key = sarama.StringEncoder(key)
+	}
+
+	_, _, err := p.producer.SendMessage(msg)
 	return err
 }
 
