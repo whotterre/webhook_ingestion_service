@@ -1,5 +1,5 @@
 from diagrams import Diagram, Cluster, Edge
-from diagrams.onprem.network import Nginx, HAProxy
+from diagrams.onprem.network import Nginx
 from diagrams.onprem.compute import Server
 from diagrams.onprem.queue import Kafka, RabbitMQ
 from diagrams.onprem.database import PostgreSQL
@@ -7,6 +7,7 @@ from diagrams.onprem.inmemory import Redis
 from diagrams.onprem.monitoring import Prometheus, Grafana
 from diagrams.aws.storage import S3
 from diagrams.onprem.client import Users
+from diagrams.programming.language import Go
 
 graph_attr = {
     "dpi": "200",
@@ -25,13 +26,13 @@ with Diagram("Webhook Ingestion Service (Local)", show=False,
     psp = Users("PSP Simulator")
 
     with Cluster("Edge"):
-        proxy = HAProxy("Reverse Proxy\n(TLS termination)")
+        proxy = Nginx("Reverse Proxy\n(TLS termination)")
 
     with Cluster("Ingest Tier"):
         ingest = [
-            Server("ingest-1"),
-            Server("ingest-2"),
-            Server("ingest-3"),
+            Go("ingest-1"), # Docker?
+            Go("ingest-2"),
+            Go("ingest-3"),
         ]
 
     buffer = Kafka("Kafka\nraw.events\n(retention: 30d)")
@@ -44,9 +45,9 @@ with Diagram("Webhook Ingestion Service (Local)", show=False,
 
     with Cluster("Worker Tier"):
         workers = [
-            Server("ledger-worker"),
-            Server("notifier-worker"),
-            Server("analytics-worker"),
+             Go("ledger-worker"),
+             Go("notifier-worker"),
+             Go("analytics-worker"),
         ]
 
     with Cluster("State"):
