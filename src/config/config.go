@@ -9,6 +9,7 @@ import (
 
 type KafkaConfig struct {
 	Brokers       []string
+	GroupID 	  string
 	Topic         string
 	Username      string
 	Password      string
@@ -22,8 +23,12 @@ func (k KafkaConfig) Enabled() bool {
 }
 
 type Config struct {
+	ArchiveDir string
 	HTTPPort string
 	Kafka    KafkaConfig
+	MetricsPort string
+	RabbitMQURL string 
+	RabbitMQExchange string
 }
 
 func Load() *Config {
@@ -38,9 +43,11 @@ func Load() *Config {
 	}
 
 	return &Config{
+		ArchiveDir: getEnv("ARCHIVE_DIR", "./archives"),
 		HTTPPort: getEnv("HTTP_PORT", "8080"),
 		Kafka: KafkaConfig{
 			Brokers:       splitCSV(getEnv("KAFKA_BROKERS", "")),
+			GroupID:       getEnv("KAFKA_GROUP_ID", ""),
 			Topic:         getEnv("KAFKA_TOPIC", "webhooks"),
 			Username:      getEnv("KAFKA_USERNAME", ""),
 			Password:      getEnv("KAFKA_PASSWORD", ""),
@@ -48,6 +55,9 @@ func Load() *Config {
 			CACertPath:    caCertPath,
 			TLS:           getBoolEnv("KAFKA_TLS", true),
 		},
+		MetricsPort: getEnv("METRICS_PORT", ""),
+		RabbitMQURL: getEnv("RABBITMQ_URL", ""),
+		RabbitMQExchange: getEnv("RABBITMQ_EXCHANGE", "webhooks-0"),
 	}
 }
 
