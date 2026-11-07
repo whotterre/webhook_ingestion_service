@@ -17,7 +17,7 @@ type TopologyConfig struct {
 	DeliveryLimit int32
 }
 
-// DeclareTopology declares all exchanges, DLX/DLQ, worker queues, and binds them.
+// DeclareTopology declares all exchanges, DLX/DLQ, worker queues needed ab initio, and binds them.
 // Idempotent: safe to call on startup.
 func DeclareTopology(conn *amqp.Connection, cfg TopologyConfig) error {
 	if cfg.ExchangeType == "" {
@@ -33,7 +33,6 @@ func DeclareTopology(conn *amqp.Connection, cfg TopologyConfig) error {
 		cfg.QueuePrefix = "webhooks"
 	}
 
-	// Declare Main Exchange safely
 	if cfg.ExchangeName != "" {
 		ch, err := conn.Channel()
 		if err != nil {
@@ -99,7 +98,7 @@ func DeclareTopology(conn *amqp.Connection, cfg TopologyConfig) error {
 		}
 	}
 
-	// 4. Declare and bind the worker queues
+	// Declare and bind the worker queues
 	ch, err := conn.Channel()
 	if err != nil {
 		return fmt.Errorf("open channel for queues: %w", err)
