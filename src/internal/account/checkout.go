@@ -69,7 +69,7 @@ func (s *Service) CreateCheckout(ctx context.Context, req CreateCheckoutRequest)
 
 	return &CheckoutResponse{
 		SessionID:        sessionID,
-		BankName:         "Wema Bank",
+		BankName:         "Bankee",
 		AccountNumber:    accNumber,
 		ExpectedAmount:   req.ExpectedAmount,
 		PaidAmount:       0,
@@ -105,10 +105,7 @@ func (s *Service) GetCheckoutStatus(ctx context.Context, sessionID string) (*Che
 	}
 
 	now := time.Now().UTC()
-	remaining := int64(expiresAt.Sub(now).Seconds())
-	if remaining < 0 {
-		remaining = 0
-	}
+	remaining := max(int64(expiresAt.Sub(now).Seconds()), 0)
 
 	// If pending but expired, update status to EXPIRED
 	if status == "PENDING" && now.After(expiresAt) {
@@ -120,7 +117,7 @@ func (s *Service) GetCheckoutStatus(ctx context.Context, sessionID string) (*Che
 
 	return &CheckoutResponse{
 		SessionID:        sessionID,
-		BankName:         "Wema Bank",
+		BankName:         "Bankee",
 		AccountNumber:    accountNumber,
 		ExpectedAmount:   expectedAmount,
 		PaidAmount:       paidAmount,
