@@ -1,92 +1,125 @@
 from diagrams import Diagram, Cluster, Edge
+from diagrams.onprem.queue import Kafka, RabbitMQ
 from diagrams.onprem.network import Nginx
 from diagrams.onprem.compute import Server
-from diagrams.onprem.queue import Kafka, RabbitMQ
 from diagrams.onprem.database import PostgreSQL
 from diagrams.onprem.inmemory import Redis
 from diagrams.onprem.monitoring import Prometheus, Grafana
-from diagrams.aws.storage import S3
 from diagrams.onprem.client import Users
+from diagrams.generic.storage import Storage
+from diagrams.aws.storage import S3
+from diagrams.generic.compute import Rack
+from diagrams.generic.network import Firewall
 from diagrams.programming.language import Go
 
+# Graph attributes for a clean look
 graph_attr = {
-    "dpi": "200",
+    "fontsize": "20",
     "bgcolor": "white",
-    "fontname": "Helvetica",
-    "fontsize": "14",
     "pad": "0.5",
-    "nodesep": "0.8",
-    "ranksep": "1.2",
     "splines": "spline",
+    "rankdir": "LR" # Left to Right flow
 }
 
-with Diagram("Webhook Ingestion Service (Local)", show=False,
-             direction="LR", graph_attr=graph_attr):
+with Diagram("Webhook Ingestion & Financial Services", show=False, graph_attr=graph_attr, filename="webhook_ingestion_arch"):
+    
+    # --- External Entities ---
+    psp = Users("PSP Simulator\n(Webhooks)")
+    psp_api = Server("PSP REST API\n(Polling)")
+    client = Users("Internal User\nService")
 
-    psp = Users("PSP Simulator")
+    # --- Edge & Ingest Tier ---
+    with Cluster("Edge & Ingest Tier"):
+        proxy = Nginx("Reverse Proxy\n(TLS)")
+        with Cluster("Ingest Workers"):
+            ingest = [Go("ingest-worker") for _ in range(3)]
 
-    with Cluster("Edge"):
-        proxy = Nginx("Reverse Proxy\n(TLS termination)")
+    # --- Message Brokers & Dispatch ---
+    with Cluster("Message Brokers & Dispatch"):
+        kafka = Kafka("Kafka\nraw.events")
+        dispatcher = Go("Dispatcher\n(Kafka -> RMQ)")
+        rmq = RabbitMQ("RabbitMQ\nExchange + 64 Queues")
+        
+    # --- Storage & Replay ---
+    with Cluster("Archive & Recovery"):
+        obj_store = S3("Object Store\nRaw Archive")
+        dlq = Storage("DLQ")
+        replay = Go("Replay CLI")
 
-    with Cluster("Ingest Tier"):
-        ingest = [
-            Go("ingest-1"), # Docker?
-            Go("ingest-2"),
-            Go("ingest-3"),
-        ]
+    # --- NEW: Financial Services ---
+    with Cluster("New Financial Services"):
+        with Cluster("Account Generation"):
+            acc_svc = Go("Account Number\nService")
+            lock = Redis("Redis\nDistributed Lock")
+        
+        with Cluster("Payment Status"):
+            pay_status_svc = Go("Payment Status\nService")
+            circuit_breaker = Firewall("Circuit Breaker\n& Poller")
 
-    buffer = Kafka("Kafka\nraw.events\n(retention: 30d)")
-
-    with Cluster("Dispatch"):
-        dispatcher = Server("Dispatcher\n(Kafka -> RMQ)")
-
-    with Cluster("Broker"):
-        rmq = RabbitMQ("RabbitMQ\nmodulus-hash exchange\n64 queues + SAC")
-
+    # --- Worker Tier ---
     with Cluster("Worker Tier"):
-        workers = [
-             Go("ledger-worker"),
-             Go("notifier-worker"),
-             Go("analytics-worker"),
-        ]
+        pay_verifier = Go("payment-verifier\n(Webhook Fallback)")
+        ledger_worker = Go("ledger-worker\n(Saga Coordinator)")
+        notifier = Go("notifier-worker")
+        analytics = Go("analytics-worker")
 
-    with Cluster("State"):
-        cache = Redis("Redis\nBloom (dedup)")
-        ledger = PostgreSQL("Postgres\nledger + idempotency")
-
-    with Cluster("Replay / Recovery"):
-        dlq = RabbitMQ("DLQ")
-        archive = S3("Object Store\nraw archive")
-        replay = Server("Replay CLI")
+    # --- State & Observability ---
+    with Cluster("State Stores"):
+        dedup_db = Redis("Redis\nBloom Filter Dedup")
+        postgres = PostgreSQL("PostgreSQL\nLedger + Outbox")
 
     with Cluster("Observability"):
         prom = Prometheus("Prometheus")
-        graf = Grafana("Grafana")
+        grafana = Grafana("Grafana")
 
-    # Ingest path
-    psp >> proxy >> ingest
-    for i in ingest:
-        i >> buffer
+    # ==========================================
+    #                  FLOWS
+    # ==========================================
 
-    # Dispatch
-    buffer >> dispatcher >> rmq
+    # 1. Ingestion Flow
+    psp >> Edge(label="HTTP POST") >> proxy
+    proxy >> Edge(label="Route") >> ingest[0]
+    proxy >> Edge(label="Route") >> ingest[1]
+    proxy >> Edge(label="Route") >> ingest[2]
+    
+    for worker in ingest:
+        worker >> Edge(label="Produce") >> kafka
 
-    # Workers
-    rmq >> workers
+    # 2. Dispatch & Archive Flow
+    kafka >> Edge(label="Consume") >> dispatcher
+    dispatcher >> Edge(label="Archive", style="dashed") >> obj_store
+    dispatcher >> Edge(label="Publish") >> rmq
 
-    # Worker effects (fan-out)
-    for w in workers:
-        w >> Edge(label="dedup") >> cache
-    workers[0] >> Edge(label="commit") >> ledger  # ledger worker only
+    # 3. DLQ & Replay
+    rmq >> Edge(label="Poison", color="red", style="dashed") >> dlq
+    obj_store >> Edge(label="Replay", style="dotted") >> replay
+    replay >> Edge(label="Re-inject", style="dotted") >> rmq
 
-    # Failure path
-    workers >> Edge(label="poison", style="dashed", color="red") >> dlq
-    dlq >> Edge(label="replay", style="dashed", color="orange") >> replay
-    archive >> Edge(label="rebuild", style="dashed", color="orange") >> replay
-    replay >> Edge(style="dashed", color="orange") >> rmq
-    buffer >> Edge(label="archive", style="dotted") >> archive
+    # 4. Worker Tier Flow
+    rmq >> Edge(label="Route") >> pay_verifier
+    rmq >> Edge(label="Route") >> ledger_worker
+    rmq >> Edge(label="Route") >> notifier
+    rmq >> Edge(label="Route") >> analytics
 
-    # Observability (dotted so it doesn't clutter the main flow)
-    for i in ingest + workers:
-        i >> Edge(style="dotted", color="gray") >> prom
-    prom >> graf
+    # 5. Payment Status Flow (The new polling logic)
+    pay_verifier >> Edge(label="Request Status") >> pay_status_svc
+    pay_status_svc >> Edge(label="Query") >> circuit_breaker
+    circuit_breaker >> Edge(label="API Call", color="blue") >> psp_api
+    pay_verifier >> Edge(label="Check", style="dotted") >> dedup_db
+    pay_verifier >> Edge(label="Event Confirmed", style="bold") >> rmq
+
+    # 6. Account Generation Flow (User Onboarding)
+    client >> Edge(label="Create Account") >> acc_svc
+    acc_svc >> Edge(label="Acquire Lock", style="dotted") >> lock
+    acc_svc >> Edge(label="Save Account + Outbox") >> postgres
+
+    # 7. Ledger & Saga Flow
+    ledger_worker >> Edge(label="Check", style="dotted") >> dedup_db
+    ledger_worker >> Edge(label="Write State") >> postgres
+    ledger_worker >> Edge(label="Emit Saga Event") >> rmq
+
+    # 8. Metrics (Dotted lines to keep it clean)
+    prom >> Edge(style="dotted", color="gray") >> grafana
+    kafka >> Edge(style="dotted", color="gray") >> prom
+    rmq >> Edge(style="dotted", color="gray") >> prom
+    postgres >> Edge(style="dotted", color="gray") >> prom
