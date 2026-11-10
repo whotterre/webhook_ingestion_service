@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Payment Receipt — {{ .PaymentID }}</title>
+  <link rel="preconnect" href="https://googleapis.com">
+  <link rel="preconnect" href="https://gstatic.com" crossorigin>
+  <link href="https://googleapis.com/css2?family=Lobster&display=swap" rel="stylesheet">
+</head>
+<body style="margin: 0; padding: 0; background-color: #f7f5f2; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1a1a1a; -webkit-font-smoothing: antialiased;">
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f7f5f2; padding: 48px 16px;">
+    <tr>
+      <td align="center">
+        <!-- Main Receipt Card -->
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 520px; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);">
+          
+          <!-- Iconic Crimson Header -->
+          <tr>
+            <td style="background-color: #F40009; padding: 32px 40px;">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td>
+                    <p style="margin: 0; font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(255, 255, 255, 0.85);">
+                      Official Receipt
+                    </p>
+                    <h1 style="margin: 6px 0 0 0; font-family: 'Lobster', Georgia, cursive; font-size: 30px; font-weight: 400; color: #ffffff; letter-spacing: 0.01em;">
+                      Payment Confirmed
+                    </h1>
+                  </td>
+                  <td align="right" valign="bottom">
+                    <span style="display: inline-block; background-color: #ffffff; color: #F40009; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 5px 10px; border-radius: 4px;">
+                      Paid
+                    </span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Amount Block -->
+          <tr>
+            <td style="padding: 36px 40px 28px 40px;">
+              <p style="margin: 0 0 6px 0; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #737373;">
+                Total Amount
+              </p>
+              <p style="margin: 0; font-family: 'Lobster', Georgia, cursive; font-size: 42px; font-weight: 400; color: #111111; letter-spacing: 0.01em;">
+                {{- .Currency }} {{ .Amount -}}
+              </p>
+            </td>
+          </tr>
+
+          <!-- Perforated Receipt Divider -->
+          <tr>
+            <td style="padding: 0 40px;">
+              <div style="border-top: 1px dashed #e5e5e5;"></div>
+            </td>
+          </tr>
+
+          <!-- Transaction Details -->
+          <tr>
+            <td style="padding: 28px 40px 36px 40px;">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td style="padding: 10px 0; font-size: 13px; color: #737373;">Transaction ID</td>
+                  <td align="right" style="padding: 10px 0; font-size: 13px; font-weight: 600; color: #1a1a1a; font-family: 'Courier New', Courier, monospace;">{{ .PaymentID }}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 10px 0; font-size: 13px; color: #737373;">Customer ID</td>
+                  <td align="right" style="padding: 10px 0; font-size: 13px; font-weight: 600; color: #1a1a1a; font-family: 'Courier New', Courier, monospace;">{{ .CustomerID }}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 10px 0; font-size: 13px; color: #737373;">Event Type</td>
+                  <td align="right" style="padding: 10px 0; font-size: 13px; font-weight: 600; color: #1a1a1a; text-transform: capitalize;">{{ .EventType }}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 10px 0; font-size: 13px; color: #737373;">Status</td>
+                  <td align="right" style="padding: 10px 0; font-size: 13px; font-weight: 700; color: #F40009;">Successful</td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding: 20px 40px; background-color: #fafafa; border-top: 1px solid #f0f0f0;">
+              <p style="margin: 0; font-size: 12px; color: #737373; line-height: 1.5;">
+                Thank you for your business. Please keep this receipt for your records or contact support if you need assistance.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
