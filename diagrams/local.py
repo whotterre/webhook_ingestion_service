@@ -108,7 +108,7 @@ with Diagram("Webhook Ingestion & Financial Services", show=False, graph_attr=gr
     ledger_worker >> Edge(label="Write State") >> postgres
     ledger_worker >> Edge(label="Emit Saga Event") >> rmq
 
-    # Metrics (Dotted lines to keep it clean)
+    # Metrics
     prom >> Edge(style="dotted", color="gray") >> grafana
     kafka >> Edge(style="dotted", color="gray") >> prom
     rmq >> Edge(style="dotted", color="gray") >> prom
