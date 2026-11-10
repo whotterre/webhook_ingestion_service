@@ -4,6 +4,10 @@ import "time"
 
 type EventType string
 
+func (e EventType) String() string {
+    return string(e)
+}
+
 const (
     PaymentCreated    EventType = "payment.created"
     PaymentProcessing EventType = "payment.processing"

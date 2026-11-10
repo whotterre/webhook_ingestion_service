@@ -18,6 +18,15 @@ type KafkaConfig struct {
 	TLS           bool
 }
 
+type BrevoConfig struct {
+	BrevoAPIKey string
+	BrevoSMTPServer string
+	BrevoSMTPLogin string // host
+	BrevoFromEmail string
+	TestDestEmail string 
+}
+
+
 func (k KafkaConfig) Enabled() bool {
 	return len(k.Brokers) > 0 && strings.TrimSpace(k.Topic) != ""
 }
@@ -26,6 +35,7 @@ type Config struct {
 	ArchiveDir string
 	HTTPPort string
 	Kafka    KafkaConfig
+	BrevoConfig BrevoConfig
 	MetricsPort string
 	RabbitMQURL string 
 	RabbitMQExchange string
@@ -55,9 +65,16 @@ func Load() *Config {
 			CACertPath:    caCertPath,
 			TLS:           getBoolEnv("KAFKA_TLS", true),
 		},
+		BrevoConfig: BrevoConfig{
+			BrevoAPIKey: getEnv("BREVO_API_KEY", ""),
+			BrevoSMTPServer: getEnv("BREVO_SMTP_SERVER", ""),
+			BrevoSMTPLogin: getEnv("BREVO_SMTP_LOGIN", ""),
+			BrevoFromEmail: getEnv("BREVO_FROM_EMAIL", ""),
+			TestDestEmail: getEnv("TEST_DEST_EMAIL", ""),
+		},
 		MetricsPort: getEnv("METRICS_PORT", ""),
 		RabbitMQURL: getEnv("RABBITMQ_URL", ""),
-		RabbitMQExchange: getEnv("RABBITMQ_EXCHANGE", "webhooks-0"),
+		RabbitMQExchange: getEnv("RABBITMQ_EXCHANGE", "webhooks"),
 	}
 }
 
