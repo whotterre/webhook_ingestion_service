@@ -74,7 +74,7 @@ func NewPublisher(cfg Config) (*Publisher, error) {
 
 	saramaConfig := sarama.NewConfig()
 	saramaConfig.Version = sarama.V4_0_0_0 
-	saramaConfig.Producer.RequiredAcks = sarama.WaitForAll
+	saramaConfig.Producer.RequiredAcks = sarama.WaitForLocal
 	saramaConfig.Producer.Return.Successes = true
 	saramaConfig.Producer.Return.Errors = true
 
